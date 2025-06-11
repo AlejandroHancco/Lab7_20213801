@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_card_ingreso"
+    android:padding="16dp"
+    android:layout_margin="8dp"
+    android:elevation="4dp">
+
+    <!-- Título en negrita y más grande -->
+    <TextView
+        android:id="@+id/txt_titulo"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Título del egreso"
+        android:textStyle="bold"
+        android:textSize="20sp"
+        android:textColor="#212121" />
+
+    <!-- Monto en rojo y negrita -->
+    <TextView
+        android:id="@+id/txt_monto"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="-S/ 0.00"
+        android:textStyle="bold"
+        android:textSize="18sp"
+        android:textColor="#D32F2F"
+        android:layout_marginTop="4dp" />
+
+    <!-- Fecha en gris oscuro, más sutil -->
+    <TextView
+        android:id="@+id/txt_fecha"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="10 de junio de 2025"
+        android:textSize="14sp"
+        android:textColor="#757575"
+        android:layout_marginTop="2dp" />
+
+    <!-- Descripción en gris medio -->
+    <TextView
+        android:id="@+id/txt_descripcion"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Descripción opcional del egreso"
+        android:textSize="15sp"
+        android:textColor="#616161"
+        android:layout_marginTop="6dp" />
+
+    <!-- Botones alineados a la derecha -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end"
+        android:layout_marginTop="8dp">
+
+        <ImageButton
+            android:id="@+id/btn_editar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@android:drawable/ic_menu_edit"
+            android:contentDescription="Editar egreso"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="#388E3C" />
+
+        <ImageButton
+            android:id="@+id/btn_eliminar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@android:drawable/ic_menu_delete"
+            android:contentDescription="Eliminar egreso"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="#D32F2F" />
+    </LinearLayout>
+
+</LinearLayout>

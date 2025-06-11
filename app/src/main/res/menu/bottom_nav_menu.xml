@@ -1,0 +1,18 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/nav_ingresos"
+        android:icon="@drawable/ingreso"
+        android:title="Ingresos" />
+    <item
+        android:id="@+id/nav_egresos"
+        android:icon="@drawable/egreso"
+        android:title="Egresos" />
+    <item
+        android:id="@+id/nav_resumen"
+        android:icon="@drawable/resumen"
+        android:title="Resumen" />
+    <item
+        android:id="@+id/nav_perfil"
+        android:icon="@drawable/perfil"
+        android:title="Perfil" />
+</menu>

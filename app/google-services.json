@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "639611773722",
+    "project_id": "dineroapp-99e76",
+    "storage_bucket": "dineroapp-99e76.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:639611773722:android:8e4d9408748ed986dc02a3",
+        "android_client_info": {
+          "package_name": "com.example.dineroapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "639611773722-l7413cutj0j0m6gu4lstme9bi421ojkr.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.dineroapp",
+            "certificate_hash": "371b75b928d1b592f92fdbdd5a62f92970c029b2"
+          }
+        },
+        {
+          "client_id": "639611773722-d29apeo4qs4gtive4d17vimjmmo4jlbo.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB2Ow0sS0JbkGRNxEyLR8Z9fhKm4noiGAM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "639611773722-d29apeo4qs4gtive4d17vimjmmo4jlbo.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,3 +1,7 @@
 <resources>
     <string name="app_name">DineroApp</string>
+    <string name="facebook_app_id">1827327284794333</string>
+    <string name="facebook_client_token">fae00bb67a824dba17851152b278dc92</string>
+    <string name="default_web_client_id">639611773722-l7413cutj0j0m6gu4lstme9bi421ojkr.apps.googleusercontent.com</string>
+
 </resources>
