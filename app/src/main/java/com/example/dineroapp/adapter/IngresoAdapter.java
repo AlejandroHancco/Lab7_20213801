@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
 
+//Copia basicamente el EgresoAdapter
 public class IngresoAdapter extends RecyclerView.Adapter<IngresoAdapter.IngresoViewHolder> {
 
     Context context;
@@ -80,7 +81,6 @@ public class IngresoAdapter extends RecyclerView.Adapter<IngresoAdapter.IngresoV
         return ingresos.size();
     }
 
-    // ✅ Add this inner class to fix the "Cannot resolve symbol 'IngresoViewHolder'" error
     public static class IngresoViewHolder extends RecyclerView.ViewHolder {
         TextView txtTitulo, txtMonto, txtFecha, txtDescripcion;
         ImageButton btnEditar, btnEliminar;
@@ -95,8 +95,6 @@ public class IngresoAdapter extends RecyclerView.Adapter<IngresoAdapter.IngresoV
             btnEliminar = itemView.findViewById(R.id.btn_eliminar);
         }
     }
-
-    // Optional: Implement this if you want editing functionality
     private void showEditDialog(Ingreso ingreso) {
         LayoutInflater inflater = LayoutInflater.from(context);
         View dialogView = inflater.inflate(R.layout.dialog_ingreso_editar, null);

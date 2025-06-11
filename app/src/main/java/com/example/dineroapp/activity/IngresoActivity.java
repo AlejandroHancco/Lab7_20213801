@@ -30,6 +30,7 @@ import java.util.Map;
 
 public class IngresoActivity extends AppCompatActivity {
 
+    // Elementos de UI y Firebase
     RecyclerView recyclerView;
     FloatingActionButton addBtn;
     FirebaseFirestore db;
@@ -43,22 +44,28 @@ public class IngresoActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_ingresos);
 
+        // Referencias a vistas
         recyclerView = findViewById(R.id.recycler_ingresos);
         addBtn = findViewById(R.id.btn_add_ingreso);
-
-        db = FirebaseFirestore.getInstance();
-        auth = FirebaseAuth.getInstance();
         txtVacio = findViewById(R.id.txt_vacio);
 
+        // Inicializar Firebase
+        db = FirebaseFirestore.getInstance();
+        auth = FirebaseAuth.getInstance();
+
+        // Configurar RecyclerView
         ingresos = new ArrayList<>();
         adapter = new IngresoAdapter(this, ingresos, db);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(adapter);
 
+        // Cargar ingresos del usuario
         loadIngresos();
 
+        // Abrir formulario de nuevo ingreso
         addBtn.setOnClickListener(v -> showDialog(null));
 
+        // Navegación inferior
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         bottomNav.setSelectedItemId(R.id.nav_ingresos);
 
@@ -74,6 +81,7 @@ public class IngresoActivity extends AppCompatActivity {
         });
     }
 
+    // Cargar ingresos desde Firebase
     private void loadIngresos() {
         String uid = auth.getCurrentUser().getUid();
         db.collection("ingreso")
@@ -92,27 +100,24 @@ public class IngresoActivity extends AppCompatActivity {
 
                     adapter.notifyDataSetChanged();
 
-                    // Mostrar mensaje si está vacío
-                    if (ingresos.isEmpty()) {
-                        txtVacio.setVisibility(View.VISIBLE);
-                    } else {
-                        txtVacio.setVisibility(View.GONE);
-                    }
+                    // Mostrar mensaje si no hay ingresos
+                    txtVacio.setVisibility(ingresos.isEmpty() ? View.VISIBLE : View.GONE);
                 });
     }
 
-
+    // Mostrar formulario de nuevo ingreso o edición
     private void showDialog(Ingreso existing) {
         LayoutInflater inflater = LayoutInflater.from(this);
         View dialogView;
 
+        // Elegir layout según si es nuevo o editar
         if (existing == null) {
             dialogView = inflater.inflate(R.layout.dialog_ingreso_crear, null);
         } else {
             dialogView = inflater.inflate(R.layout.dialog_ingreso_editar, null);
         }
 
-        // Referencias comunes
+        // Campos comunes
         EditText edtMonto = dialogView.findViewById(R.id.edt_monto);
         EditText edtDescripcion = dialogView.findViewById(R.id.edt_descripcion);
 
@@ -120,14 +125,13 @@ public class IngresoActivity extends AppCompatActivity {
         EditText edtFechaEditable;
         TextView txtTituloDisplay = null;
         TextView txtFechaDisplay = null;
-
         final String[] fecha = new String[1];
 
         if (existing == null) {
             edtTitulo = dialogView.findViewById(R.id.edt_titulo);
             edtFechaEditable = dialogView.findViewById(R.id.edt_fecha);
 
-            // Listener para seleccionar fecha solo en modo creación
+            // Selección de fecha
             edtFechaEditable.setOnClickListener(v -> {
                 Calendar calendar = Calendar.getInstance();
                 DatePickerDialog datePickerDialog = new DatePickerDialog(
@@ -145,6 +149,7 @@ public class IngresoActivity extends AppCompatActivity {
             });
 
         } else {
+            // Mostrar datos existentes (no se editan título ni fecha)
             edtTitulo = null;
             edtFechaEditable = null;
             txtTituloDisplay = dialogView.findViewById(R.id.txt_titulo_display);
@@ -157,10 +162,12 @@ public class IngresoActivity extends AppCompatActivity {
             edtDescripcion.setText(existing.descripcion != null ? existing.descripcion : "");
         }
 
+        // Crear el diálogo
         new AlertDialog.Builder(this)
                 .setTitle(existing == null ? "Nuevo Ingreso" : "Editar Ingreso")
                 .setView(dialogView)
                 .setPositiveButton("Guardar", (dialog, which) -> {
+                    // Obtener datos del formulario
                     String titulo = (existing == null) ? edtTitulo.getText().toString().trim() : existing.titulo;
                     String montoStr = edtMonto.getText().toString().trim();
                     String descripcion = edtDescripcion.getText().toString().trim();
@@ -178,9 +185,9 @@ public class IngresoActivity extends AppCompatActivity {
                         return;
                     }
 
+                    // Guardar en Firebase
                     if (existing == null) {
                         fecha[0] = edtFechaEditable.getText().toString().trim();
-
                         if (fecha[0].isEmpty()) {
                             Toast.makeText(this, "Por favor, selecciona una fecha", Toast.LENGTH_SHORT).show();
                             return;
@@ -201,7 +208,7 @@ public class IngresoActivity extends AppCompatActivity {
                                 });
 
                     } else {
-                        // No cambiar la fecha ni el título
+                        // Actualizar monto y descripción
                         existing.monto = monto;
                         existing.descripcion = descripcion;
 
@@ -215,6 +222,4 @@ public class IngresoActivity extends AppCompatActivity {
                 .setNegativeButton("Cancelar", null)
                 .show();
     }
-
-
 }

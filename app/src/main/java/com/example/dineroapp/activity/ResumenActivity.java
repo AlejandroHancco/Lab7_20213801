@@ -1,33 +1,30 @@
 package com.example.dineroapp.activity;
 
-import android.app.DatePickerDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Button;
 import android.widget.TextView;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.dineroapp.R;
 import com.github.mikephil.charting.charts.BarChart;
 import com.github.mikephil.charting.charts.PieChart;
 import com.github.mikephil.charting.components.Description;
-import com.github.mikephil.charting.data.BarData;
-import com.github.mikephil.charting.data.BarDataSet;
-import com.github.mikephil.charting.data.BarEntry;
-import com.github.mikephil.charting.data.PieData;
-import com.github.mikephil.charting.data.PieDataSet;
-import com.github.mikephil.charting.data.PieEntry;
+import com.github.mikephil.charting.data.*;
 import com.github.mikephil.charting.utils.ColorTemplate;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.firebase.firestore.FirebaseFirestore;
 import com.google.firebase.firestore.QueryDocumentSnapshot;
+import com.kal.rackmonthpicker.RackMonthPicker;
+import com.kal.rackmonthpicker.listener.DateMonthDialogListener;
+import com.kal.rackmonthpicker.listener.OnCancelMonthDialogListener;
+
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Locale;
+import java.util.*;
 
 public class ResumenActivity extends AppCompatActivity {
 
@@ -35,8 +32,10 @@ public class ResumenActivity extends AppCompatActivity {
     private PieChart pieChart;
     private BarChart barChart;
     private Button btnSelectMonth;
+
     private Calendar selectedMonth;
     private FirebaseFirestore db;
+
     private float ingresosTotal = 0;
     private float egresosTotal = 0;
 
@@ -58,10 +57,10 @@ public class ResumenActivity extends AppCompatActivity {
         updateMonthText();
         loadChartData();
 
-        btnSelectMonth.setOnClickListener(v -> showMonthPicker());
+        btnSelectMonth.setOnClickListener(v -> showMonthYearPicker());
+
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         bottomNav.setSelectedItemId(R.id.nav_resumen);
-
         bottomNav.setOnItemSelectedListener(item -> {
             int itemId = item.getItemId();
 
@@ -79,20 +78,35 @@ public class ResumenActivity extends AppCompatActivity {
         txtSelectedMonth.setText("Mes: " + sdf.format(selectedMonth.getTime()));
     }
 
-    private void showMonthPicker() {
-        int year = selectedMonth.get(Calendar.YEAR);
-        int month = selectedMonth.get(Calendar.MONTH);
+    //Función en GitHub de un buen samaritano
+    private void showMonthYearPicker() {
+        new RackMonthPicker(this)
+                .setColorTheme(R.color.primary)
+                .setLocale(new Locale("es", "ES"))
+                .setPositiveText("Aceptar") // Cambia texto del botón "OK"
+                .setNegativeText("Cancelar") // Cambia texto del botón "Cancelar"
+                .setPositiveButton(new DateMonthDialogListener() {
+                    @Override
+                    public void onDateMonth(int month, int startDate, int endDate, int year, String monthLabel) {
+                        selectedMonth.set(Calendar.YEAR, year);
+                        selectedMonth.set(Calendar.MONTH, month - 1); // Calendar es 0-based
+                        selectedMonth.set(Calendar.DAY_OF_MONTH, 1);
 
-        DatePickerDialog dialog = new DatePickerDialog(this,
-                (view, year1, month1, dayOfMonth) -> {
-                    selectedMonth.set(Calendar.YEAR, year1);
-                    selectedMonth.set(Calendar.MONTH, month1);
-                    selectedMonth.set(Calendar.DAY_OF_MONTH, 1);
-                    updateMonthText();
-                    loadChartData();
-                }, year, month, 1);
-        dialog.show();
+                        updateMonthText();
+                        loadChartData();
+                    }
+                })
+                .setNegativeButton(new OnCancelMonthDialogListener() {
+                    @Override
+                    public void onCancel(AlertDialog dialog) {
+                        dialog.dismiss();
+                    }
+                })
+                .show();
     }
+
+
+
 
     private void loadChartData() {
         ingresosTotal = 0;
@@ -192,11 +206,10 @@ public class ResumenActivity extends AppCompatActivity {
     }
 
     private void renderBarChart(float ingresos, float egresos) {
-        // Mostrar siempre las barras, incluso si son 0
         ArrayList<BarEntry> entries = new ArrayList<>();
         entries.add(new BarEntry(0, ingresos));
         entries.add(new BarEntry(1, egresos));
-        entries.add(new BarEntry(2, ingresos - egresos));
+        entries.add(new BarEntry(2, ingresos - egresos)); // Neto
 
         BarDataSet dataSet = new BarDataSet(entries, "Movimientos");
         dataSet.setColors(ColorTemplate.COLORFUL_COLORS);
@@ -216,5 +229,4 @@ public class ResumenActivity extends AppCompatActivity {
                 "Ingresos: S/%.2f | Egresos: S/%.2f | Neto: S/%.2f",
                 ingresos, egresos, ingresos - egresos));
     }
-
 }

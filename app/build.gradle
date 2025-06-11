@@ -43,6 +43,8 @@ dependencies {
     implementation 'com.google.firebase:firebase-auth:23.2.1'
     implementation 'com.firebaseui:firebase-ui-auth:8.0.2'
     implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
+
+    implementation 'com.github.kal72:RackMonthPicker:1.6.1'
     implementation 'com.facebook.android:facebook-login:16.3.0'
 
 

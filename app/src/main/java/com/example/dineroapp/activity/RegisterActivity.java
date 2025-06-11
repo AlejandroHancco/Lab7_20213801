@@ -10,6 +10,7 @@ import com.google.firebase.auth.FirebaseAuth;
 
 public class RegisterActivity extends AppCompatActivity {
 
+    // Declaración de vistas y Firebase
     private EditText inputEmail, inputPassword, inputRepeatPassword;
     private Button btnRegistrar;
     private FirebaseAuth mAuth;
@@ -17,24 +18,29 @@ public class RegisterActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_register);
+        setContentView(R.layout.activity_register); // Cargar diseño XML
 
-        // Inicialización
+        // Inicializar vistas
         inputEmail = findViewById(R.id.input_email);
         inputPassword = findViewById(R.id.input_password);
         inputRepeatPassword = findViewById(R.id.input_repeat_password);
         btnRegistrar = findViewById(R.id.btn_registrar);
+
+        // Inicializar FirebaseAuth
         mAuth = FirebaseAuth.getInstance();
 
-        // Botón de registro
+        // Manejar clic en el botón de registrar
         btnRegistrar.setOnClickListener(v -> registrarUsuario());
     }
 
+    // Metodo para registrar un nuevo usuario
     private void registrarUsuario() {
+        // Obtener datos del formulario
         String email = inputEmail.getText().toString().trim();
         String password = inputPassword.getText().toString().trim();
         String repeatPassword = inputRepeatPassword.getText().toString().trim();
 
+        // Validaciones básicas
         if (email.isEmpty() || password.isEmpty() || repeatPassword.isEmpty()) {
             Toast.makeText(this, "Completa todos los campos", Toast.LENGTH_SHORT).show();
             return;
@@ -50,14 +56,17 @@ public class RegisterActivity extends AppCompatActivity {
             return;
         }
 
-        // Registrar en Firebase
+        // Crear cuenta en Firebase Authentication
         mAuth.createUserWithEmailAndPassword(email, password)
                 .addOnCompleteListener(this, task -> {
                     if (task.isSuccessful()) {
+                        // Registro exitoso
                         Toast.makeText(this, "Registro exitoso", Toast.LENGTH_SHORT).show();
+                        // Redirigir al login
                         startActivity(new Intent(this, LoginActivity.class));
-                        finish();
+                        finish(); // Cierra esta actividad
                     } else {
+                        // Mostrar error
                         Toast.makeText(this, "Error al registrar: " + task.getException().getMessage(), Toast.LENGTH_LONG).show();
                     }
                 });

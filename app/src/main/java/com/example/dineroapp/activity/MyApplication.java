@@ -5,7 +5,7 @@ import android.app.Application;
 import com.example.dineroapp.R;
 import com.facebook.FacebookSdk;
 import com.facebook.appevents.AppEventsLogger;
-
+//Cree una java destinado a Facebook login. Las fotos están guardadas en el pdf subido a Paideia
 public class MyApplication extends Application {
     @Override
     public void onCreate() {

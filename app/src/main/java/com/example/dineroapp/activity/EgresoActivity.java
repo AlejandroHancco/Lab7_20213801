@@ -44,36 +44,41 @@ public class EgresoActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_egresos);
 
+        // Referencias a vistas
         recyclerView = findViewById(R.id.recycler_egresos);
         addBtn = findViewById(R.id.btn_add_egreso);
 
+        // Inicializar Firebase
         db = FirebaseFirestore.getInstance();
         auth = FirebaseAuth.getInstance();
 
+        // Configurar RecyclerView
         egresos = new ArrayList<>();
         adapter = new EgresoAdapter(this, egresos, db);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(adapter);
         txtVacio = findViewById(R.id.txt_vacio);
+
+        // Cargar egresos desde Firestore
         loadEgresos();
 
+        // Botón para agregar nuevo egreso
         addBtn.setOnClickListener(v -> showDialog(null));
 
+        // Configurar navegación inferior
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         bottomNav.setSelectedItemId(R.id.nav_egresos);
-
         bottomNav.setOnItemSelectedListener(item -> {
             int itemId = item.getItemId();
-
             if (itemId == R.id.nav_egresos) return true;
             if (itemId == R.id.nav_ingresos) startActivity(new Intent(this, IngresoActivity.class));
             else if (itemId == R.id.nav_resumen) startActivity(new Intent(this, ResumenActivity.class));
             else if (itemId == R.id.nav_perfil) startActivity(new Intent(this, PerfilActivity.class));
-
             return true;
         });
     }
 
+    // Cargar egresos del usuario actual
     private void loadEgresos() {
         String uid = auth.getCurrentUser().getUid();
         db.collection("egreso")
@@ -92,26 +97,24 @@ public class EgresoActivity extends AppCompatActivity {
 
                     adapter.notifyDataSetChanged();
 
-                    // Mostrar mensaje si está vacío
-                    if (egresos.isEmpty()) {
-                        txtVacio.setVisibility(View.VISIBLE);
-                    } else {
-                        txtVacio.setVisibility(View.GONE);
-                    }
+                    // Mostrar mensaje si no hay egresos
+                    txtVacio.setVisibility(egresos.isEmpty() ? View.VISIBLE : View.GONE);
                 });
     }
 
+    // Mostrar diálogo para crear o editar un egreso
     private void showDialog(Egreso existing) {
         LayoutInflater inflater = LayoutInflater.from(this);
         View dialogView;
 
+        // Usar layout diferente según sea nuevo o edición
         if (existing == null) {
             dialogView = inflater.inflate(R.layout.dialog_ingreso_crear, null);
         } else {
             dialogView = inflater.inflate(R.layout.dialog_ingreso_editar, null);
         }
 
-        // Referencias comunes
+        // Campos comunes
         EditText edtMonto = dialogView.findViewById(R.id.edt_monto);
         EditText edtDescripcion = dialogView.findViewById(R.id.edt_descripcion);
 
@@ -123,10 +126,11 @@ public class EgresoActivity extends AppCompatActivity {
         final String[] fecha = new String[1];
 
         if (existing == null) {
+            // Campos para crear
             edtTitulo = dialogView.findViewById(R.id.edt_titulo);
             edtFechaEditable = dialogView.findViewById(R.id.edt_fecha);
 
-            // Listener para seleccionar fecha solo en modo creación
+            // Selección de fecha
             edtFechaEditable.setOnClickListener(v -> {
                 Calendar calendar = Calendar.getInstance();
                 DatePickerDialog datePickerDialog = new DatePickerDialog(
@@ -144,18 +148,18 @@ public class EgresoActivity extends AppCompatActivity {
             });
 
         } else {
+            // Campos para edición (solo se puede cambiar monto y descripción)
             edtTitulo = null;
             edtFechaEditable = null;
             txtTituloDisplay = dialogView.findViewById(R.id.txt_titulo_display);
             txtTituloDisplay.setText(existing.titulo);
-
             txtFechaDisplay = dialogView.findViewById(R.id.txt_fecha_display);
             txtFechaDisplay.setText(existing.fecha);
-
             edtMonto.setText(String.valueOf(existing.monto));
             edtDescripcion.setText(existing.descripcion != null ? existing.descripcion : "");
         }
 
+        // Crear diálogo
         new AlertDialog.Builder(this)
                 .setTitle(existing == null ? "Nuevo Egreso" : "Editar Egreso")
                 .setView(dialogView)
@@ -164,6 +168,7 @@ public class EgresoActivity extends AppCompatActivity {
                     String montoStr = edtMonto.getText().toString().trim();
                     String descripcion = edtDescripcion.getText().toString().trim();
 
+                    // Validar campos
                     if (titulo.isEmpty() || montoStr.isEmpty()) {
                         Toast.makeText(this, "Por favor, completa los campos obligatorios", Toast.LENGTH_SHORT).show();
                         return;
@@ -178,6 +183,7 @@ public class EgresoActivity extends AppCompatActivity {
                     }
 
                     if (existing == null) {
+                        // Guardar nuevo egreso
                         fecha[0] = edtFechaEditable.getText().toString().trim();
 
                         if (fecha[0].isEmpty()) {
@@ -200,7 +206,7 @@ public class EgresoActivity extends AppCompatActivity {
                                 });
 
                     } else {
-                        // No cambiar la fecha ni el título
+                        // Actualizar egreso existente
                         existing.monto = monto;
                         existing.descripcion = descripcion;
 
@@ -214,6 +220,5 @@ public class EgresoActivity extends AppCompatActivity {
                 .setNegativeButton("Cancelar", null)
                 .show();
     }
-
-
 }
+
