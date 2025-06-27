@@ -41,7 +41,7 @@ public class IngresoActivity extends AppCompatActivity implements IngresoAdapter
 
     private Uri comprobanteUriGlobal;
     private Ingreso ingresoEnEdicion;
-    private ImageView ivComprobanteActual;  // Preview de imagen actual
+    private ImageView ivComprobanteActual;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -70,7 +70,6 @@ public class IngresoActivity extends AppCompatActivity implements IngresoAdapter
 
         bottomNav.setOnItemSelectedListener(item -> {
             int id = item.getItemId();
-
             if (id == R.id.nav_ingresos) return true;
             if (id == R.id.nav_egresos) {
                 startActivity(new Intent(this, EgresoActivity.class));
@@ -85,7 +84,6 @@ public class IngresoActivity extends AppCompatActivity implements IngresoAdapter
                 return true;
             }
             return false;
-
         });
     }
 
@@ -115,29 +113,39 @@ public class IngresoActivity extends AppCompatActivity implements IngresoAdapter
 
     private void mostrarDialogo(Ingreso ingreso) {
         LayoutInflater inflater = LayoutInflater.from(this);
-        View dialogView = inflater.inflate(
-                ingreso == null ? R.layout.dialog_ingreso_crear : R.layout.dialog_ingreso_editar,
-                null
-        );
+        View dialogView = inflater.inflate(R.layout.dialog_ingreso_editar, null);
 
+        EditText edtTitulo = dialogView.findViewById(R.id.edt_titulo);
+        TextView txtTitulo = dialogView.findViewById(R.id.txt_titulo_display);
         EditText edtMonto = dialogView.findViewById(R.id.edt_monto);
         EditText edtDescripcion = dialogView.findViewById(R.id.edt_descripcion);
+        TextView txtFecha = dialogView.findViewById(R.id.txt_fecha_display);
         ImageView ivComprobante = dialogView.findViewById(R.id.iv_comprobante);
         Button btnSeleccionarFoto = dialogView.findViewById(R.id.btn_seleccionar_foto);
-        TextView txtTitulo = dialogView.findViewById(R.id.txt_titulo_display);
-        TextView txtFecha = dialogView.findViewById(R.id.txt_fecha_display);
 
         comprobanteUriGlobal = null;
         ingresoEnEdicion = ingreso;
         ivComprobanteActual = ivComprobante;
 
         if (ingreso != null) {
+            // Modo edición: mostrar el título en TextView (no editable)
+            edtTitulo.setVisibility(View.GONE);
+            txtTitulo.setVisibility(View.VISIBLE);
+            txtTitulo.setText(ingreso.titulo);
+
             edtMonto.setText(String.valueOf(ingreso.monto));
             edtDescripcion.setText(ingreso.descripcion != null ? ingreso.descripcion : "");
-            txtTitulo.setText(ingreso.titulo);
-            txtFecha.setText(ingreso.fecha);
+            if (txtFecha != null) txtFecha.setText(ingreso.fecha);
             if (ingreso.urlComprobante != null)
                 Glide.with(this).load(ingreso.urlComprobante).into(ivComprobante);
+        } else {
+            // Modo creación: mostrar EditText para escribir el título
+            edtTitulo.setVisibility(View.VISIBLE);
+            txtTitulo.setVisibility(View.GONE);
+        }
+
+        if (txtFecha != null) {
+            txtFecha.setOnClickListener(v -> mostrarDatePicker(txtFecha));
         }
 
         btnSeleccionarFoto.setOnClickListener(v -> {
@@ -156,8 +164,17 @@ public class IngresoActivity extends AppCompatActivity implements IngresoAdapter
         dialog.setOnShowListener(d -> {
             Button btnGuardar = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
             btnGuardar.setOnClickListener(view -> {
+                String titulo = ingreso == null
+                        ? edtTitulo.getText().toString().trim()
+                        : txtTitulo.getText().toString().trim();
                 String montoStr = edtMonto.getText().toString().trim();
                 String descripcion = edtDescripcion.getText().toString().trim();
+                String fecha = (txtFecha != null) ? txtFecha.getText().toString().trim() : "";
+
+                if (titulo.isEmpty()) {
+                    Toast.makeText(this, "Ingresa un título", Toast.LENGTH_SHORT).show();
+                    return;
+                }
 
                 if (montoStr.isEmpty()) {
                     Toast.makeText(this, "Ingresa el monto", Toast.LENGTH_SHORT).show();
@@ -172,8 +189,15 @@ public class IngresoActivity extends AppCompatActivity implements IngresoAdapter
                     return;
                 }
 
-                ingreso.monto = monto;
-                ingreso.descripcion = descripcion;
+                Ingreso ingresoFinal = (ingreso == null) ? new Ingreso() : ingreso;
+                if (ingreso == null) {
+                    ingresoFinal.idUsuario = auth.getCurrentUser().getUid();
+                }
+
+                ingresoFinal.titulo = titulo;
+                ingresoFinal.monto = monto;
+                ingresoFinal.descripcion = descripcion;
+                ingresoFinal.fecha = fecha;
 
                 if (comprobanteUriGlobal != null) {
                     ServicioAlmacenamiento servicio = new ServicioAlmacenamiento(this);
@@ -181,24 +205,50 @@ public class IngresoActivity extends AppCompatActivity implements IngresoAdapter
                     servicio.guardarArchivo(nombreArchivo, comprobanteUriGlobal, new ServicioAlmacenamiento.UploadCallback() {
                         @Override
                         public void onSuccess(String imageUrl) {
-                            ingreso.urlComprobante = imageUrl;
-                            actualizarIngreso(ingreso);
-                            dialog.dismiss();
+                            ingresoFinal.urlComprobante = imageUrl;
+                            runOnUiThread(() -> {
+                                if (ingreso == null) {
+                                    crearIngreso(ingresoFinal);
+                                } else {
+                                    actualizarIngreso(ingresoFinal);
+                                }
+                                if (!isFinishing() && dialog.isShowing()) {
+                                    dialog.dismiss();
+                                }
+                            });
                         }
 
                         @Override
                         public void onFailure(Exception e) {
-                            Toast.makeText(IngresoActivity.this, "Error al subir archivo", Toast.LENGTH_SHORT).show();
+                            runOnUiThread(() ->
+                                    Toast.makeText(IngresoActivity.this, "Error al subir archivo", Toast.LENGTH_SHORT).show());
                         }
                     });
                 } else {
-                    actualizarIngreso(ingreso);
-                    dialog.dismiss();
+                    if (ingreso == null) {
+                        crearIngreso(ingresoFinal);
+                    } else {
+                        actualizarIngreso(ingresoFinal);
+                    }
+                    if (!isFinishing() && dialog.isShowing()) {
+                        dialog.dismiss();
+                    }
                 }
             });
         });
 
         dialog.show();
+    }
+
+
+
+    private void crearIngreso(Ingreso ingreso) {
+        db.collection("ingreso")
+                .add(ingreso)
+                .addOnSuccessListener(docRef ->
+                        Toast.makeText(this, "Ingreso creado", Toast.LENGTH_SHORT).show())
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Error al crear ingreso", Toast.LENGTH_SHORT).show());
     }
 
     private void actualizarIngreso(Ingreso ingreso) {
@@ -216,8 +266,22 @@ public class IngresoActivity extends AppCompatActivity implements IngresoAdapter
         if (requestCode == REQUEST_IMAGE_PICK && resultCode == RESULT_OK && data != null) {
             comprobanteUriGlobal = data.getData();
             if (ivComprobanteActual != null && comprobanteUriGlobal != null) {
-                ivComprobanteActual.setImageURI(comprobanteUriGlobal);  // Mostrar nueva imagen seleccionada
+                ivComprobanteActual.setImageURI(comprobanteUriGlobal);
             }
         }
+    }
+
+    private void mostrarDatePicker(TextView txtFecha) {
+        final Calendar calendario = Calendar.getInstance();
+        int anio = calendario.get(Calendar.YEAR);
+        int mes = calendario.get(Calendar.MONTH);
+        int dia = calendario.get(Calendar.DAY_OF_MONTH);
+
+        DatePickerDialog datePickerDialog = new DatePickerDialog(this,
+                (view, year, month, dayOfMonth) -> {
+                    String fechaSeleccionada = String.format(Locale.getDefault(), "%02d/%02d/%04d", dayOfMonth, month + 1, year);
+                    txtFecha.setText(fechaSeleccionada);
+                }, anio, mes, dia);
+        datePickerDialog.show();
     }
 }

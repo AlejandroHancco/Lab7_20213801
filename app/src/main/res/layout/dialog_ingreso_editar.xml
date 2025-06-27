@@ -9,14 +9,29 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content">
 
-        <!-- Título en modo edición -->
+        <!-- EditText solo visible al crear -->
+        <EditText
+            android:id="@+id/edt_titulo"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:hint="Título"
+            android:visibility="gone"
+            android:inputType="textCapSentences"
+            android:textColor="@android:color/black"
+            android:background="@android:drawable/edit_text"
+            android:padding="12dp"
+            android:textSize="16sp" />
+
+        <!-- TextView solo visible al editar -->
         <TextView
             android:id="@+id/txt_titulo_display"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:visibility="gone"
             android:textSize="16sp"
             android:padding="12dp"
             android:textColor="@android:color/black"
+            android:background="@android:drawable/edit_text"
             android:text="Título" />
 
         <!-- Monto -->
@@ -25,7 +40,8 @@
             android:hint="Monto"
             android:inputType="numberDecimal"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"/>
 
         <!-- Fecha -->
         <TextView
@@ -35,16 +51,19 @@
             android:textSize="16sp"
             android:padding="12dp"
             android:textColor="@android:color/black"
-            android:text="Fecha" />
+            android:text="Fecha"
+            android:background="@android:drawable/edit_text"
+            android:layout_marginTop="12dp"/>
 
         <!-- Descripción -->
         <EditText
             android:id="@+id/edt_descripcion"
             android:hint="Descripción"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"/>
 
-        <!-- Vista previa del comprobante -->
+        <!-- Imagen -->
         <ImageView
             android:id="@+id/iv_comprobante"
             android:layout_width="match_parent"
@@ -54,11 +73,12 @@
             android:contentDescription="Comprobante"
             android:src="@drawable/ic_add_photo" />
 
-        <!-- Botón para cambiar la imagen -->
+        <!-- Botón imagen -->
         <Button
             android:id="@+id/btn_seleccionar_foto"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Cambiar comprobante" />
+            android:text="Cambiar comprobante"
+            android:layout_marginTop="12dp"/>
     </LinearLayout>
 </ScrollView>

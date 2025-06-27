@@ -63,17 +63,16 @@ public class EgresoActivity extends AppCompatActivity implements EgresoAdapter.E
 
         loadEgresos();
 
-        addBtn.setOnClickListener(v -> showDialog(null));
+        addBtn.setOnClickListener(v -> mostrarDialogo(null));
 
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         bottomNav.setSelectedItemId(R.id.nav_egresos);
-
         bottomNav.setOnItemSelectedListener(item -> {
-            int itemId = item.getItemId();
-            if (itemId == R.id.nav_egresos) return true;
-            if (itemId == R.id.nav_ingresos) startActivity(new Intent(this, IngresoActivity.class));
-            else if (itemId == R.id.nav_resumen) startActivity(new Intent(this, ResumenActivity.class));
-            else if (itemId == R.id.nav_perfil) startActivity(new Intent(this, PerfilActivity.class));
+            int id = item.getItemId();
+            if (id == R.id.nav_egresos) return true;
+            if (id == R.id.nav_ingresos) startActivity(new Intent(this, IngresoActivity.class));
+            if (id == R.id.nav_resumen) startActivity(new Intent(this, ResumenActivity.class));
+            if (id == R.id.nav_perfil) startActivity(new Intent(this, PerfilActivity.class));
             return true;
         });
     }
@@ -84,16 +83,14 @@ public class EgresoActivity extends AppCompatActivity implements EgresoAdapter.E
                 .whereEqualTo("idUsuario", uid)
                 .addSnapshotListener((snapshots, e) -> {
                     if (e != null || snapshots == null) return;
-
                     egresos.clear();
                     for (DocumentSnapshot doc : snapshots) {
-                        Egreso i = doc.toObject(Egreso.class);
-                        if (i != null) {
-                            i.setId(doc.getId());
-                            egresos.add(i);
+                        Egreso egr = doc.toObject(Egreso.class);
+                        if (egr != null) {
+                            egr.setId(doc.getId());
+                            egresos.add(egr);
                         }
                     }
-
                     adapter.notifyDataSetChanged();
                     txtVacio.setVisibility(egresos.isEmpty() ? View.VISIBLE : View.GONE);
                 });
@@ -101,34 +98,44 @@ public class EgresoActivity extends AppCompatActivity implements EgresoAdapter.E
 
     @Override
     public void mostrarDialogoEditar(Egreso egreso) {
-        showDialog(egreso);
+        mostrarDialogo(egreso);
     }
 
-    private void showDialog(Egreso existing) {
+    private void mostrarDialogo(Egreso egreso) {
         LayoutInflater inflater = LayoutInflater.from(this);
-        View dialogView = inflater.inflate(
-                existing == null ? R.layout.dialog_ingreso_crear : R.layout.dialog_ingreso_editar,
-                null
-        );
+        View dialogView = inflater.inflate(R.layout.dialog_ingreso_editar, null);
 
+        EditText edtTitulo = dialogView.findViewById(R.id.edt_titulo);
+        TextView txtTitulo = dialogView.findViewById(R.id.txt_titulo_display);
         EditText edtMonto = dialogView.findViewById(R.id.edt_monto);
         EditText edtDescripcion = dialogView.findViewById(R.id.edt_descripcion);
+        TextView txtFecha = dialogView.findViewById(R.id.txt_fecha_display);
         ImageView ivComprobante = dialogView.findViewById(R.id.iv_comprobante);
         Button btnSeleccionarFoto = dialogView.findViewById(R.id.btn_seleccionar_foto);
-        TextView txtTitulo = dialogView.findViewById(R.id.txt_titulo_display);
-        TextView txtFecha = dialogView.findViewById(R.id.txt_fecha_display);
 
         comprobanteUriGlobal = null;
-        egresoEnEdicion = existing;
+        egresoEnEdicion = egreso;
         ivComprobanteActual = ivComprobante;
 
-        if (existing != null) {
-            edtMonto.setText(String.valueOf(existing.monto));
-            edtDescripcion.setText(existing.descripcion != null ? existing.descripcion : "");
-            txtTitulo.setText(existing.titulo);
-            txtFecha.setText(existing.fecha);
-            if (existing.urlComprobante != null)
-                Glide.with(this).load(existing.urlComprobante).into(ivComprobante);
+        if (egreso != null) {
+            // Modo solo lectura para el título
+            txtTitulo.setText(egreso.titulo);
+            edtTitulo.setVisibility(View.GONE);
+            txtTitulo.setVisibility(View.VISIBLE);
+
+            edtMonto.setText(String.valueOf(egreso.monto));
+            edtDescripcion.setText(egreso.descripcion != null ? egreso.descripcion : "");
+            if (txtFecha != null) txtFecha.setText(egreso.fecha);
+            if (egreso.urlComprobante != null)
+                Glide.with(this).load(egreso.urlComprobante).into(ivComprobante);
+        } else {
+            // Modo edición para el título
+            edtTitulo.setVisibility(View.VISIBLE);
+            txtTitulo.setVisibility(View.GONE);
+        }
+
+        if (txtFecha != null) {
+            txtFecha.setOnClickListener(v -> mostrarDatePicker(txtFecha));
         }
 
         btnSeleccionarFoto.setOnClickListener(v -> {
@@ -138,7 +145,7 @@ public class EgresoActivity extends AppCompatActivity implements EgresoAdapter.E
         });
 
         AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle(existing == null ? "Nuevo Egreso" : "Editar Egreso")
+                .setTitle(egreso == null ? "Nuevo Egreso" : "Editar Egreso")
                 .setView(dialogView)
                 .setPositiveButton("Guardar", null)
                 .setNegativeButton("Cancelar", null)
@@ -147,8 +154,19 @@ public class EgresoActivity extends AppCompatActivity implements EgresoAdapter.E
         dialog.setOnShowListener(d -> {
             Button btnGuardar = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
             btnGuardar.setOnClickListener(view -> {
+                // Si estamos creando, tomamos el texto del EditText.
+                String titulo = (egreso == null)
+                        ? edtTitulo.getText().toString().trim()
+                        : txtTitulo.getText().toString().trim();
+
                 String montoStr = edtMonto.getText().toString().trim();
                 String descripcion = edtDescripcion.getText().toString().trim();
+                String fecha = (txtFecha != null) ? txtFecha.getText().toString().trim() : "";
+
+                if (titulo.isEmpty()) {
+                    Toast.makeText(this, "Ingresa un título", Toast.LENGTH_SHORT).show();
+                    return;
+                }
 
                 if (montoStr.isEmpty()) {
                     Toast.makeText(this, "Ingresa el monto", Toast.LENGTH_SHORT).show();
@@ -163,8 +181,15 @@ public class EgresoActivity extends AppCompatActivity implements EgresoAdapter.E
                     return;
                 }
 
-                existing.monto = monto;
-                existing.descripcion = descripcion;
+                Egreso egresoFinal = (egreso == null) ? new Egreso() : egreso;
+                if (egreso == null) {
+                    egresoFinal.idUsuario = auth.getCurrentUser().getUid();
+                }
+
+                egresoFinal.titulo = titulo;
+                egresoFinal.monto = monto;
+                egresoFinal.descripcion = descripcion;
+                egresoFinal.fecha = fecha;
 
                 if (comprobanteUriGlobal != null) {
                     ServicioAlmacenamiento servicio = new ServicioAlmacenamiento(this);
@@ -172,24 +197,49 @@ public class EgresoActivity extends AppCompatActivity implements EgresoAdapter.E
                     servicio.guardarArchivo(nombreArchivo, comprobanteUriGlobal, new ServicioAlmacenamiento.UploadCallback() {
                         @Override
                         public void onSuccess(String imageUrl) {
-                            existing.urlComprobante = imageUrl;
-                            actualizarEgreso(existing);
-                            dialog.dismiss();
+                            egresoFinal.urlComprobante = imageUrl;
+                            runOnUiThread(() -> {
+                                if (egreso == null) {
+                                    crearEgreso(egresoFinal);
+                                } else {
+                                    actualizarEgreso(egresoFinal);
+                                }
+                                if (!isFinishing() && dialog.isShowing()) {
+                                    dialog.dismiss();
+                                }
+                            });
                         }
 
                         @Override
                         public void onFailure(Exception e) {
-                            Toast.makeText(EgresoActivity.this, "Error al subir archivo", Toast.LENGTH_SHORT).show();
+                            runOnUiThread(() ->
+                                    Toast.makeText(EgresoActivity.this, "Error al subir archivo", Toast.LENGTH_SHORT).show());
                         }
                     });
                 } else {
-                    actualizarEgreso(existing);
-                    dialog.dismiss();
+                    if (egreso == null) {
+                        crearEgreso(egresoFinal);
+                    } else {
+                        actualizarEgreso(egresoFinal);
+                    }
+                    if (!isFinishing() && dialog.isShowing()) {
+                        dialog.dismiss();
+                    }
                 }
             });
         });
 
         dialog.show();
+    }
+
+
+    private void crearEgreso(Egreso egreso) {
+        db.collection("egreso")
+                .add(egreso)
+                .addOnSuccessListener(docRef ->
+                        Toast.makeText(this, "Egreso creado", Toast.LENGTH_SHORT).show())
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Error al crear egreso", Toast.LENGTH_SHORT).show());
     }
 
     private void actualizarEgreso(Egreso egreso) {
@@ -210,5 +260,19 @@ public class EgresoActivity extends AppCompatActivity implements EgresoAdapter.E
                 ivComprobanteActual.setImageURI(comprobanteUriGlobal);
             }
         }
+    }
+
+    private void mostrarDatePicker(TextView txtFecha) {
+        final Calendar calendario = Calendar.getInstance();
+        int anio = calendario.get(Calendar.YEAR);
+        int mes = calendario.get(Calendar.MONTH);
+        int dia = calendario.get(Calendar.DAY_OF_MONTH);
+
+        DatePickerDialog datePickerDialog = new DatePickerDialog(this,
+                (view, year, month, dayOfMonth) -> {
+                    String fechaSeleccionada = String.format(Locale.getDefault(), "%02d/%02d/%04d", dayOfMonth, month + 1, year);
+                    txtFecha.setText(fechaSeleccionada);
+                }, anio, mes, dia);
+        datePickerDialog.show();
     }
 }

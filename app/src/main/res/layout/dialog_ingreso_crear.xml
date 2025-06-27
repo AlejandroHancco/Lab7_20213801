@@ -10,24 +10,19 @@
         android:layout_height="wrap_content">
 
         <!-- TextView para mostrar el título en modo edición -->
-        <TextView
-            android:id="@+id/txt_titulo_display"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:visibility="gone"
-            android:textSize="16sp"
-            android:textStyle="bold"
-            android:padding="12dp"
-            android:background="@android:drawable/edit_text"
-            android:textColor="@android:color/black"
-            android:hint="Título" />
 
-        <!-- EditText para título -->
+
         <EditText
             android:id="@+id/edt_titulo"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:hint="Título" />
+            android:hint="Título"
+            android:textSize="16sp"
+            android:textStyle="bold"
+            android:padding="12dp"
+            android:background="@android:drawable/edit_text"
+            android:textColor="@android:color/black" />
+
 
         <EditText
             android:id="@+id/edt_monto"
@@ -36,14 +31,15 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"/>
 
-        <EditText
-            android:id="@+id/edt_fecha"
-            android:hint="Fecha"
-            android:focusable="false"
-            android:inputType="none"
-            android:clickable="true"
+        <TextView
+            android:id="@+id/txt_fecha_display"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"/>
+            android:layout_height="wrap_content"
+            android:textSize="16sp"
+            android:padding="12dp"
+            android:textColor="@android:color/black"
+            android:text="Fecha" />
+
 
         <EditText
             android:id="@+id/edt_descripcion"
