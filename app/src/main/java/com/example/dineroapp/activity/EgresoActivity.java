@@ -3,33 +3,33 @@ package com.example.dineroapp.activity;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.EditText;
-import android.widget.TextView;
-import android.widget.Toast;
+import android.widget.*;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.example.dineroapp.R;
 import com.example.dineroapp.adapter.EgresoAdapter;
 import com.example.dineroapp.model.Egreso;
-import com.example.dineroapp.model.Ingreso;
+import com.example.dineroapp.model.ServicioAlmacenamiento;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
-public class EgresoActivity extends AppCompatActivity {
+public class EgresoActivity extends AppCompatActivity implements EgresoAdapter.EgresoEditListener {
+
+    private static final int REQUEST_IMAGE_PICK = 102;
 
     RecyclerView recyclerView;
     FloatingActionButton addBtn;
@@ -39,35 +39,35 @@ public class EgresoActivity extends AppCompatActivity {
     EgresoAdapter adapter;
     TextView txtVacio;
 
+    private Uri comprobanteUriGlobal;
+    private Egreso egresoEnEdicion;
+    private ImageView ivComprobanteActual;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_egresos);
 
-        // Referencias a vistas
         recyclerView = findViewById(R.id.recycler_egresos);
         addBtn = findViewById(R.id.btn_add_egreso);
+        txtVacio = findViewById(R.id.txt_vacio);
 
-        // Inicializar Firebase
         db = FirebaseFirestore.getInstance();
         auth = FirebaseAuth.getInstance();
 
-        // Configurar RecyclerView
         egresos = new ArrayList<>();
         adapter = new EgresoAdapter(this, egresos, db);
+        adapter.setEgresoEditListener(this);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(adapter);
-        txtVacio = findViewById(R.id.txt_vacio);
 
-        // Cargar egresos desde Firestore
         loadEgresos();
 
-        // Botón para agregar nuevo egreso
         addBtn.setOnClickListener(v -> showDialog(null));
 
-        // Configurar navegación inferior
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         bottomNav.setSelectedItemId(R.id.nav_egresos);
+
         bottomNav.setOnItemSelectedListener(item -> {
             int itemId = item.getItemId();
             if (itemId == R.id.nav_egresos) return true;
@@ -78,7 +78,6 @@ public class EgresoActivity extends AppCompatActivity {
         });
     }
 
-    // Cargar egresos del usuario actual
     private void loadEgresos() {
         String uid = auth.getCurrentUser().getUid();
         db.collection("egreso")
@@ -96,129 +95,120 @@ public class EgresoActivity extends AppCompatActivity {
                     }
 
                     adapter.notifyDataSetChanged();
-
-                    // Mostrar mensaje si no hay egresos
                     txtVacio.setVisibility(egresos.isEmpty() ? View.VISIBLE : View.GONE);
                 });
     }
 
-    // Mostrar diálogo para crear o editar un egreso
+    @Override
+    public void mostrarDialogoEditar(Egreso egreso) {
+        showDialog(egreso);
+    }
+
     private void showDialog(Egreso existing) {
         LayoutInflater inflater = LayoutInflater.from(this);
-        View dialogView;
+        View dialogView = inflater.inflate(
+                existing == null ? R.layout.dialog_ingreso_crear : R.layout.dialog_ingreso_editar,
+                null
+        );
 
-        // Usar layout diferente según sea nuevo o edición
-        if (existing == null) {
-            dialogView = inflater.inflate(R.layout.dialog_ingreso_crear, null);
-        } else {
-            dialogView = inflater.inflate(R.layout.dialog_ingreso_editar, null);
-        }
-
-        // Campos comunes
         EditText edtMonto = dialogView.findViewById(R.id.edt_monto);
         EditText edtDescripcion = dialogView.findViewById(R.id.edt_descripcion);
+        ImageView ivComprobante = dialogView.findViewById(R.id.iv_comprobante);
+        Button btnSeleccionarFoto = dialogView.findViewById(R.id.btn_seleccionar_foto);
+        TextView txtTitulo = dialogView.findViewById(R.id.txt_titulo_display);
+        TextView txtFecha = dialogView.findViewById(R.id.txt_fecha_display);
 
-        EditText edtTitulo;
-        EditText edtFechaEditable;
-        TextView txtTituloDisplay = null;
-        TextView txtFechaDisplay = null;
+        comprobanteUriGlobal = null;
+        egresoEnEdicion = existing;
+        ivComprobanteActual = ivComprobante;
 
-        final String[] fecha = new String[1];
-
-        if (existing == null) {
-            // Campos para crear
-            edtTitulo = dialogView.findViewById(R.id.edt_titulo);
-            edtFechaEditable = dialogView.findViewById(R.id.edt_fecha);
-
-            // Selección de fecha
-            edtFechaEditable.setOnClickListener(v -> {
-                Calendar calendar = Calendar.getInstance();
-                DatePickerDialog datePickerDialog = new DatePickerDialog(
-                        this,
-                        (view, year, month, dayOfMonth) -> {
-                            String selectedFecha = dayOfMonth + "/" + (month + 1) + "/" + year;
-                            edtFechaEditable.setText(selectedFecha);
-                        },
-                        calendar.get(Calendar.YEAR),
-                        calendar.get(Calendar.MONTH),
-                        calendar.get(Calendar.DAY_OF_MONTH)
-                );
-                datePickerDialog.getDatePicker().setMaxDate(System.currentTimeMillis());
-                datePickerDialog.show();
-            });
-
-        } else {
-            // Campos para edición (solo se puede cambiar monto y descripción)
-            edtTitulo = null;
-            edtFechaEditable = null;
-            txtTituloDisplay = dialogView.findViewById(R.id.txt_titulo_display);
-            txtTituloDisplay.setText(existing.titulo);
-            txtFechaDisplay = dialogView.findViewById(R.id.txt_fecha_display);
-            txtFechaDisplay.setText(existing.fecha);
+        if (existing != null) {
             edtMonto.setText(String.valueOf(existing.monto));
             edtDescripcion.setText(existing.descripcion != null ? existing.descripcion : "");
+            txtTitulo.setText(existing.titulo);
+            txtFecha.setText(existing.fecha);
+            if (existing.urlComprobante != null)
+                Glide.with(this).load(existing.urlComprobante).into(ivComprobante);
         }
 
-        // Crear diálogo
-        new AlertDialog.Builder(this)
+        btnSeleccionarFoto.setOnClickListener(v -> {
+            Intent intent = new Intent(Intent.ACTION_PICK);
+            intent.setType("image/*");
+            startActivityForResult(intent, REQUEST_IMAGE_PICK);
+        });
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
                 .setTitle(existing == null ? "Nuevo Egreso" : "Editar Egreso")
                 .setView(dialogView)
-                .setPositiveButton("Guardar", (dialog, which) -> {
-                    String titulo = (existing == null) ? edtTitulo.getText().toString().trim() : existing.titulo;
-                    String montoStr = edtMonto.getText().toString().trim();
-                    String descripcion = edtDescripcion.getText().toString().trim();
+                .setPositiveButton("Guardar", null)
+                .setNegativeButton("Cancelar", null)
+                .create();
 
-                    // Validar campos
-                    if (titulo.isEmpty() || montoStr.isEmpty()) {
-                        Toast.makeText(this, "Por favor, completa los campos obligatorios", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
+        dialog.setOnShowListener(d -> {
+            Button btnGuardar = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            btnGuardar.setOnClickListener(view -> {
+                String montoStr = edtMonto.getText().toString().trim();
+                String descripcion = edtDescripcion.getText().toString().trim();
 
-                    double monto;
-                    try {
-                        monto = Double.parseDouble(montoStr);
-                    } catch (NumberFormatException e) {
-                        Toast.makeText(this, "Monto inválido", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
+                if (montoStr.isEmpty()) {
+                    Toast.makeText(this, "Ingresa el monto", Toast.LENGTH_SHORT).show();
+                    return;
+                }
 
-                    if (existing == null) {
-                        // Guardar nuevo egreso
-                        fecha[0] = edtFechaEditable.getText().toString().trim();
+                double monto;
+                try {
+                    monto = Double.parseDouble(montoStr);
+                } catch (NumberFormatException e) {
+                    Toast.makeText(this, "Monto inválido", Toast.LENGTH_SHORT).show();
+                    return;
+                }
 
-                        if (fecha[0].isEmpty()) {
-                            Toast.makeText(this, "Por favor, selecciona una fecha", Toast.LENGTH_SHORT).show();
-                            return;
+                existing.monto = monto;
+                existing.descripcion = descripcion;
+
+                if (comprobanteUriGlobal != null) {
+                    ServicioAlmacenamiento servicio = new ServicioAlmacenamiento(this);
+                    String nombreArchivo = System.currentTimeMillis() + ".jpg";
+                    servicio.guardarArchivo(nombreArchivo, comprobanteUriGlobal, new ServicioAlmacenamiento.UploadCallback() {
+                        @Override
+                        public void onSuccess(String imageUrl) {
+                            existing.urlComprobante = imageUrl;
+                            actualizarEgreso(existing);
+                            dialog.dismiss();
                         }
 
-                        String uid = auth.getCurrentUser().getUid();
-                        Map<String, Object> data = new HashMap<>();
-                        data.put("titulo", titulo);
-                        data.put("monto", monto);
-                        data.put("fecha", fecha[0]);
-                        data.put("descripcion", descripcion);
-                        data.put("idUsuario", uid);
+                        @Override
+                        public void onFailure(Exception e) {
+                            Toast.makeText(EgresoActivity.this, "Error al subir archivo", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                } else {
+                    actualizarEgreso(existing);
+                    dialog.dismiss();
+                }
+            });
+        });
 
-                        db.collection("egreso")
-                                .add(data)
-                                .addOnSuccessListener(docRef -> {
-                                    Toast.makeText(this, "Egreso guardado", Toast.LENGTH_SHORT).show();
-                                });
+        dialog.show();
+    }
 
-                    } else {
-                        // Actualizar egreso existente
-                        existing.monto = monto;
-                        existing.descripcion = descripcion;
+    private void actualizarEgreso(Egreso egreso) {
+        db.collection("egreso").document(egreso.id)
+                .set(egreso)
+                .addOnSuccessListener(unused ->
+                        Toast.makeText(this, "Egreso actualizado", Toast.LENGTH_SHORT).show())
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Error al actualizar egreso", Toast.LENGTH_SHORT).show());
+    }
 
-                        db.collection("egreso").document(existing.id)
-                                .set(existing)
-                                .addOnSuccessListener(unused -> {
-                                    Toast.makeText(this, "Egreso actualizado", Toast.LENGTH_SHORT).show();
-                                });
-                    }
-                })
-                .setNegativeButton("Cancelar", null)
-                .show();
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_IMAGE_PICK && resultCode == RESULT_OK && data != null) {
+            comprobanteUriGlobal = data.getData();
+            if (ivComprobanteActual != null && comprobanteUriGlobal != null) {
+                ivComprobanteActual.setImageURI(comprobanteUriGlobal);
+            }
+        }
     }
 }
-

@@ -75,6 +75,14 @@
             android:contentDescription="Eliminar egreso"
             android:background="?attr/selectableItemBackgroundBorderless"
             app:tint="#D32F2F" />
+        <ImageButton
+            android:id="@+id/btn_descargar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@android:drawable/ic_menu_save"
+            android:contentDescription="Descargar comprobante"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            app:tint="#388E3C" />
     </LinearLayout>
 
 </LinearLayout>

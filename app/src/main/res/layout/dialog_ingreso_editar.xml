@@ -1,42 +1,64 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
-    android:padding="20dp"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="wrap_content">
 
-    <!-- TextView para mostrar el título en modo edición -->
-    <TextView
-        android:id="@+id/txt_titulo_display"
+    <LinearLayout
+        android:orientation="vertical"
+        android:padding="20dp"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="16sp"
-        android:padding="12dp"
-        android:textColor="@android:color/black"
-        android:hint="Titulo" />
+        android:layout_height="wrap_content">
 
+        <!-- Título en modo edición -->
+        <TextView
+            android:id="@+id/txt_titulo_display"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="16sp"
+            android:padding="12dp"
+            android:textColor="@android:color/black"
+            android:text="Título" />
 
+        <!-- Monto -->
+        <EditText
+            android:id="@+id/edt_monto"
+            android:hint="Monto"
+            android:inputType="numberDecimal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
 
-    <EditText
-        android:id="@+id/edt_monto"
-        android:hint="Monto"
-        android:inputType="numberDecimal"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
+        <!-- Fecha -->
+        <TextView
+            android:id="@+id/txt_fecha_display"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="16sp"
+            android:padding="12dp"
+            android:textColor="@android:color/black"
+            android:text="Fecha" />
 
-    <TextView
-        android:id="@+id/txt_fecha_display"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="16sp"
-        android:padding="12dp"
-        android:textColor="@android:color/black"
-        android:hint="Fecha" />
+        <!-- Descripción -->
+        <EditText
+            android:id="@+id/edt_descripcion"
+            android:hint="Descripción"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"/>
 
+        <!-- Vista previa del comprobante -->
+        <ImageView
+            android:id="@+id/iv_comprobante"
+            android:layout_width="match_parent"
+            android:layout_height="180dp"
+            android:layout_marginTop="16dp"
+            android:scaleType="centerCrop"
+            android:contentDescription="Comprobante"
+            android:src="@drawable/ic_add_photo" />
 
-    <EditText
-        android:id="@+id/edt_descripcion"
-        android:hint="Descripción"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"/>
-</LinearLayout>
+        <!-- Botón para cambiar la imagen -->
+        <Button
+            android:id="@+id/btn_seleccionar_foto"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Cambiar comprobante" />
+    </LinearLayout>
+</ScrollView>

@@ -3,34 +3,34 @@ package com.example.dineroapp.activity;
 import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.widget.EditText;
-import android.widget.TextView;
-import android.widget.Toast;
+import android.widget.*;
 
+import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.example.dineroapp.R;
 import com.example.dineroapp.adapter.IngresoAdapter;
 import com.example.dineroapp.model.Ingreso;
+import com.example.dineroapp.model.ServicioAlmacenamiento;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.firebase.auth.FirebaseAuth;
 import com.google.firebase.firestore.DocumentSnapshot;
 import com.google.firebase.firestore.FirebaseFirestore;
 
-import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
-public class IngresoActivity extends AppCompatActivity {
+public class IngresoActivity extends AppCompatActivity implements IngresoAdapter.IngresoEditListener {
 
-    // Elementos de UI y Firebase
+    private static final int REQUEST_IMAGE_PICK = 101;
+
     RecyclerView recyclerView;
     FloatingActionButton addBtn;
     FirebaseFirestore db;
@@ -39,56 +39,62 @@ public class IngresoActivity extends AppCompatActivity {
     IngresoAdapter adapter;
     TextView txtVacio;
 
+    private Uri comprobanteUriGlobal;
+    private Ingreso ingresoEnEdicion;
+    private ImageView ivComprobanteActual;  // Preview de imagen actual
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_ingresos);
 
-        // Referencias a vistas
         recyclerView = findViewById(R.id.recycler_ingresos);
         addBtn = findViewById(R.id.btn_add_ingreso);
         txtVacio = findViewById(R.id.txt_vacio);
 
-        // Inicializar Firebase
         db = FirebaseFirestore.getInstance();
         auth = FirebaseAuth.getInstance();
 
-        // Configurar RecyclerView
         ingresos = new ArrayList<>();
         adapter = new IngresoAdapter(this, ingresos, db);
+        adapter.setIngresoEditListener(this);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
         recyclerView.setAdapter(adapter);
 
-        // Cargar ingresos del usuario
         loadIngresos();
 
-        // Abrir formulario de nuevo ingreso
-        addBtn.setOnClickListener(v -> showDialog(null));
+        addBtn.setOnClickListener(v -> mostrarDialogo(null));
 
-        // Navegación inferior
         BottomNavigationView bottomNav = findViewById(R.id.bottom_navigation);
         bottomNav.setSelectedItemId(R.id.nav_ingresos);
 
         bottomNav.setOnItemSelectedListener(item -> {
-            int itemId = item.getItemId();
+            int id = item.getItemId();
 
-            if (itemId == R.id.nav_ingresos) return true;
-            if (itemId == R.id.nav_egresos) startActivity(new Intent(this, EgresoActivity.class));
-            else if (itemId == R.id.nav_resumen) startActivity(new Intent(this, ResumenActivity.class));
-            else if (itemId == R.id.nav_perfil) startActivity(new Intent(this, PerfilActivity.class));
+            if (id == R.id.nav_ingresos) return true;
+            if (id == R.id.nav_egresos) {
+                startActivity(new Intent(this, EgresoActivity.class));
+                return true;
+            }
+            if (id == R.id.nav_resumen) {
+                startActivity(new Intent(this, ResumenActivity.class));
+                return true;
+            }
+            if (id == R.id.nav_perfil) {
+                startActivity(new Intent(this, PerfilActivity.class));
+                return true;
+            }
+            return false;
 
-            return true;
         });
     }
 
-    // Cargar ingresos desde Firebase
     private void loadIngresos() {
         String uid = auth.getCurrentUser().getUid();
         db.collection("ingreso")
                 .whereEqualTo("idUsuario", uid)
                 .addSnapshotListener((snapshots, e) -> {
                     if (e != null || snapshots == null) return;
-
                     ingresos.clear();
                     for (DocumentSnapshot doc : snapshots) {
                         Ingreso i = doc.toObject(Ingreso.class);
@@ -97,129 +103,121 @@ public class IngresoActivity extends AppCompatActivity {
                             ingresos.add(i);
                         }
                     }
-
                     adapter.notifyDataSetChanged();
-
-                    // Mostrar mensaje si no hay ingresos
                     txtVacio.setVisibility(ingresos.isEmpty() ? View.VISIBLE : View.GONE);
                 });
     }
 
-    // Mostrar formulario de nuevo ingreso o edición
-    private void showDialog(Ingreso existing) {
+    @Override
+    public void mostrarDialogoEditar(Ingreso ingreso) {
+        mostrarDialogo(ingreso);
+    }
+
+    private void mostrarDialogo(Ingreso ingreso) {
         LayoutInflater inflater = LayoutInflater.from(this);
-        View dialogView;
+        View dialogView = inflater.inflate(
+                ingreso == null ? R.layout.dialog_ingreso_crear : R.layout.dialog_ingreso_editar,
+                null
+        );
 
-        // Elegir layout según si es nuevo o editar
-        if (existing == null) {
-            dialogView = inflater.inflate(R.layout.dialog_ingreso_crear, null);
-        } else {
-            dialogView = inflater.inflate(R.layout.dialog_ingreso_editar, null);
-        }
-
-        // Campos comunes
         EditText edtMonto = dialogView.findViewById(R.id.edt_monto);
         EditText edtDescripcion = dialogView.findViewById(R.id.edt_descripcion);
+        ImageView ivComprobante = dialogView.findViewById(R.id.iv_comprobante);
+        Button btnSeleccionarFoto = dialogView.findViewById(R.id.btn_seleccionar_foto);
+        TextView txtTitulo = dialogView.findViewById(R.id.txt_titulo_display);
+        TextView txtFecha = dialogView.findViewById(R.id.txt_fecha_display);
 
-        EditText edtTitulo;
-        EditText edtFechaEditable;
-        TextView txtTituloDisplay = null;
-        TextView txtFechaDisplay = null;
-        final String[] fecha = new String[1];
+        comprobanteUriGlobal = null;
+        ingresoEnEdicion = ingreso;
+        ivComprobanteActual = ivComprobante;
 
-        if (existing == null) {
-            edtTitulo = dialogView.findViewById(R.id.edt_titulo);
-            edtFechaEditable = dialogView.findViewById(R.id.edt_fecha);
-
-            // Selección de fecha
-            edtFechaEditable.setOnClickListener(v -> {
-                Calendar calendar = Calendar.getInstance();
-                DatePickerDialog datePickerDialog = new DatePickerDialog(
-                        this,
-                        (view, year, month, dayOfMonth) -> {
-                            String selectedFecha = dayOfMonth + "/" + (month + 1) + "/" + year;
-                            edtFechaEditable.setText(selectedFecha);
-                        },
-                        calendar.get(Calendar.YEAR),
-                        calendar.get(Calendar.MONTH),
-                        calendar.get(Calendar.DAY_OF_MONTH)
-                );
-                datePickerDialog.getDatePicker().setMaxDate(System.currentTimeMillis());
-                datePickerDialog.show();
-            });
-
-        } else {
-            // Mostrar datos existentes (no se editan título ni fecha)
-            edtTitulo = null;
-            edtFechaEditable = null;
-            txtTituloDisplay = dialogView.findViewById(R.id.txt_titulo_display);
-            txtTituloDisplay.setText(existing.titulo);
-
-            txtFechaDisplay = dialogView.findViewById(R.id.txt_fecha_display);
-            txtFechaDisplay.setText(existing.fecha);
-
-            edtMonto.setText(String.valueOf(existing.monto));
-            edtDescripcion.setText(existing.descripcion != null ? existing.descripcion : "");
+        if (ingreso != null) {
+            edtMonto.setText(String.valueOf(ingreso.monto));
+            edtDescripcion.setText(ingreso.descripcion != null ? ingreso.descripcion : "");
+            txtTitulo.setText(ingreso.titulo);
+            txtFecha.setText(ingreso.fecha);
+            if (ingreso.urlComprobante != null)
+                Glide.with(this).load(ingreso.urlComprobante).into(ivComprobante);
         }
 
-        // Crear el diálogo
-        new AlertDialog.Builder(this)
-                .setTitle(existing == null ? "Nuevo Ingreso" : "Editar Ingreso")
+        btnSeleccionarFoto.setOnClickListener(v -> {
+            Intent intent = new Intent(Intent.ACTION_PICK);
+            intent.setType("image/*");
+            startActivityForResult(intent, REQUEST_IMAGE_PICK);
+        });
+
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle(ingreso == null ? "Nuevo Ingreso" : "Editar Ingreso")
                 .setView(dialogView)
-                .setPositiveButton("Guardar", (dialog, which) -> {
-                    // Obtener datos del formulario
-                    String titulo = (existing == null) ? edtTitulo.getText().toString().trim() : existing.titulo;
-                    String montoStr = edtMonto.getText().toString().trim();
-                    String descripcion = edtDescripcion.getText().toString().trim();
+                .setPositiveButton("Guardar", null)
+                .setNegativeButton("Cancelar", null)
+                .create();
 
-                    if (titulo.isEmpty() || montoStr.isEmpty()) {
-                        Toast.makeText(this, "Por favor, completa los campos obligatorios", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
+        dialog.setOnShowListener(d -> {
+            Button btnGuardar = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+            btnGuardar.setOnClickListener(view -> {
+                String montoStr = edtMonto.getText().toString().trim();
+                String descripcion = edtDescripcion.getText().toString().trim();
 
-                    double monto;
-                    try {
-                        monto = Double.parseDouble(montoStr);
-                    } catch (NumberFormatException e) {
-                        Toast.makeText(this, "Monto inválido", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
+                if (montoStr.isEmpty()) {
+                    Toast.makeText(this, "Ingresa el monto", Toast.LENGTH_SHORT).show();
+                    return;
+                }
 
-                    // Guardar en Firebase
-                    if (existing == null) {
-                        fecha[0] = edtFechaEditable.getText().toString().trim();
-                        if (fecha[0].isEmpty()) {
-                            Toast.makeText(this, "Por favor, selecciona una fecha", Toast.LENGTH_SHORT).show();
-                            return;
+                double monto;
+                try {
+                    monto = Double.parseDouble(montoStr);
+                } catch (NumberFormatException e) {
+                    Toast.makeText(this, "Monto inválido", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+
+                ingreso.monto = monto;
+                ingreso.descripcion = descripcion;
+
+                if (comprobanteUriGlobal != null) {
+                    ServicioAlmacenamiento servicio = new ServicioAlmacenamiento(this);
+                    String nombreArchivo = System.currentTimeMillis() + ".jpg";
+                    servicio.guardarArchivo(nombreArchivo, comprobanteUriGlobal, new ServicioAlmacenamiento.UploadCallback() {
+                        @Override
+                        public void onSuccess(String imageUrl) {
+                            ingreso.urlComprobante = imageUrl;
+                            actualizarIngreso(ingreso);
+                            dialog.dismiss();
                         }
 
-                        String uid = auth.getCurrentUser().getUid();
-                        Map<String, Object> data = new HashMap<>();
-                        data.put("titulo", titulo);
-                        data.put("monto", monto);
-                        data.put("fecha", fecha[0]);
-                        data.put("descripcion", descripcion);
-                        data.put("idUsuario", uid);
+                        @Override
+                        public void onFailure(Exception e) {
+                            Toast.makeText(IngresoActivity.this, "Error al subir archivo", Toast.LENGTH_SHORT).show();
+                        }
+                    });
+                } else {
+                    actualizarIngreso(ingreso);
+                    dialog.dismiss();
+                }
+            });
+        });
 
-                        db.collection("ingreso")
-                                .add(data)
-                                .addOnSuccessListener(docRef -> {
-                                    Toast.makeText(this, "Ingreso guardado", Toast.LENGTH_SHORT).show();
-                                });
+        dialog.show();
+    }
 
-                    } else {
-                        // Actualizar monto y descripción
-                        existing.monto = monto;
-                        existing.descripcion = descripcion;
+    private void actualizarIngreso(Ingreso ingreso) {
+        db.collection("ingreso").document(ingreso.id)
+                .set(ingreso)
+                .addOnSuccessListener(unused ->
+                        Toast.makeText(this, "Ingreso actualizado", Toast.LENGTH_SHORT).show())
+                .addOnFailureListener(e ->
+                        Toast.makeText(this, "Error al actualizar ingreso", Toast.LENGTH_SHORT).show());
+    }
 
-                        db.collection("ingreso").document(existing.id)
-                                .set(existing)
-                                .addOnSuccessListener(unused -> {
-                                    Toast.makeText(this, "Ingreso actualizado", Toast.LENGTH_SHORT).show();
-                                });
-                    }
-                })
-                .setNegativeButton("Cancelar", null)
-                .show();
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode == REQUEST_IMAGE_PICK && resultCode == RESULT_OK && data != null) {
+            comprobanteUriGlobal = data.getData();
+            if (ivComprobanteActual != null && comprobanteUriGlobal != null) {
+                ivComprobanteActual.setImageURI(comprobanteUriGlobal);  // Mostrar nueva imagen seleccionada
+            }
+        }
     }
 }

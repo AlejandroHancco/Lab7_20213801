@@ -2,11 +2,16 @@ package com.example.dineroapp.adapter;
 
 import android.app.AlertDialog;
 import android.content.Context;
-import android.view.*;
-import android.widget.*;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.widget.ImageButton;
+import android.widget.TextView;
+import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.example.dineroapp.R;
 import com.example.dineroapp.model.Ingreso;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -15,9 +20,19 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
+import android.view.ViewGroup;
 
-//Copia basicamente el EgresoAdapter
 public class IngresoAdapter extends RecyclerView.Adapter<IngresoAdapter.IngresoViewHolder> {
+
+    public interface IngresoEditListener {
+        void mostrarDialogoEditar(Ingreso ingreso);
+    }
+
+    private IngresoEditListener editListener;
+
+    public void setIngresoEditListener(IngresoEditListener listener) {
+        this.editListener = listener;
+    }
 
     Context context;
     ArrayList<Ingreso> ingresos;
@@ -50,7 +65,12 @@ public class IngresoAdapter extends RecyclerView.Adapter<IngresoAdapter.IngresoV
                         : ingreso.descripcion
         );
 
-        holder.btnEditar.setOnClickListener(v -> showEditDialog(ingreso));
+        holder.btnEditar.setOnClickListener(v -> {
+            if (editListener != null) {
+                editListener.mostrarDialogoEditar(ingreso);
+            }
+        });
+
         holder.btnEliminar.setOnClickListener(v -> {
             new AlertDialog.Builder(context)
                     .setTitle("Eliminar")
@@ -73,7 +93,6 @@ public class IngresoAdapter extends RecyclerView.Adapter<IngresoAdapter.IngresoV
                     .setNegativeButton("Cancelar", null)
                     .show();
         });
-
     }
 
     @Override
@@ -95,74 +114,15 @@ public class IngresoAdapter extends RecyclerView.Adapter<IngresoAdapter.IngresoV
             btnEliminar = itemView.findViewById(R.id.btn_eliminar);
         }
     }
-    private void showEditDialog(Ingreso ingreso) {
-        LayoutInflater inflater = LayoutInflater.from(context);
-        View dialogView = inflater.inflate(R.layout.dialog_ingreso_editar, null);
-
-        // Obtener referencias a vistas
-        TextView txtTituloDisplay = dialogView.findViewById(R.id.txt_titulo_display);
-        TextView txtFechaDisplay = dialogView.findViewById(R.id.txt_fecha_display);
-        EditText edtMonto = dialogView.findViewById(R.id.edt_monto);
-        EditText edtDescripcion = dialogView.findViewById(R.id.edt_descripcion);
-
-        // Setear valores actuales
-        txtTituloDisplay.setText(ingreso.titulo);
-        txtFechaDisplay.setText(formatearFecha(ingreso.fecha));
-        edtMonto.setText(String.valueOf(ingreso.monto));
-        edtDescripcion.setText(ingreso.descripcion != null ? ingreso.descripcion : "");
-
-        new AlertDialog.Builder(context)
-                .setTitle("Editar Ingreso")
-                .setView(dialogView)
-                .setPositiveButton("Guardar", (dialog, which) -> {
-                    String montoStr = edtMonto.getText().toString().trim();
-                    String descripcion = edtDescripcion.getText().toString().trim();
-
-                    if (montoStr.isEmpty()) {
-                        Toast.makeText(context, "Por favor ingresa un monto", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-
-                    double monto;
-                    try {
-                        monto = Double.parseDouble(montoStr);
-                    } catch (NumberFormatException e) {
-                        Toast.makeText(context, "Monto inválido", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-
-                    // Actualizar en Firestore
-                    ingreso.monto = monto;
-                    ingreso.descripcion = descripcion;
-
-                    db.collection("ingreso").document(ingreso.id)
-                            .set(ingreso)
-                            .addOnSuccessListener(unused -> {
-                                notifyDataSetChanged();
-                                Toast.makeText(context, "Ingreso actualizado", Toast.LENGTH_SHORT).show();
-                            })
-                            .addOnFailureListener(e ->
-                                    Toast.makeText(context, "Error al actualizar", Toast.LENGTH_SHORT).show()
-                            );
-                })
-                .setNegativeButton("Cancelar", null)
-                .show();
-    }
 
     private String formatearFecha(String fechaOriginal) {
         try {
-            // Intenta analizar la fecha original, por ejemplo "2/2/2025"
             SimpleDateFormat formatoEntrada = new SimpleDateFormat("d/M/yyyy");
             Date fecha = formatoEntrada.parse(fechaOriginal);
-
-            // Establece el formato de salida en español
             SimpleDateFormat formatoSalida = new SimpleDateFormat("d 'de' MMMM 'de' yyyy", new Locale("es", "ES"));
-
             return formatoSalida.format(fecha);
         } catch (Exception e) {
-            return fechaOriginal; // Si hay error, muestra la original
+            return fechaOriginal;
         }
     }
-
-
 }

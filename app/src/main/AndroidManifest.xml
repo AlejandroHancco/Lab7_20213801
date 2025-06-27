@@ -1,14 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-    <uses-permission android:name="android.permission.INTERNET" />
 
-    <meta-data
-        android:name="com.facebook.sdk.ApplicationId"
-        android:value="@string/facebook_app_id" />
-    <meta-data
-        android:name="com.facebook.sdk.ClientToken"
-        android:value="@string/facebook_client_token" />
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
+
     <application
         android:name=".activity.MyApplication"
         android:allowBackup="true"
@@ -20,21 +16,31 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.DineroApp"
         tools:targetApi="31">
-        <activity
-            android:name=".activity.LoginActivity"
+
+        <!-- ACTIVITIES -->
+        <activity android:name=".activity.LoginActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".activity.IngresoActivity"/>
-        <activity android:name=".activity.EgresoActivity"/>
-        <activity android:name=".activity.ResumenActivity"/>
-        <activity android:name=".activity.PerfilActivity"/>
-        <activity android:name=".activity.RegisterActivity"/>
+        <activity android:name=".activity.IngresoActivity" />
+        <activity android:name=".activity.EgresoActivity" />
+        <activity android:name=".activity.ResumenActivity" />
+        <activity android:name=".activity.PerfilActivity" />
+        <activity android:name=".activity.RegisterActivity" />
 
-        </application>
+        <!-- FILE PROVIDER DEBE IR AQUÍ DENTRO -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
 
+    </application>
 </manifest>

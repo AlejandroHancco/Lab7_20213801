@@ -7,6 +7,8 @@ public class Egreso {
     public double monto;
     public String descripcion;
     public String fecha;
+    public String urlComprobante;
+
 
     public Egreso() {}
     public Egreso(String titulo, double monto, String fecha, String descripcion, String idUsuario) {
@@ -63,6 +65,14 @@ public class Egreso {
 
     public void setFecha(String fecha) {
         this.fecha = fecha;
+    }
+
+    public String getUrlComprobante() {
+        return urlComprobante;
+    }
+
+    public void setUrlComprobante(String urlComprobante) {
+        this.urlComprobante = urlComprobante;
     }
 }
 

@@ -7,6 +7,7 @@ public class Ingreso {
     public double monto;
     public String descripcion;
     public String fecha;
+    public String urlComprobante;
 
     public Ingreso() {}
     public Ingreso(String titulo, double monto, String fecha, String descripcion, String idUsuario) {
@@ -63,6 +64,14 @@ public class Ingreso {
 
     public void setFecha(String fecha) {
         this.fecha = fecha;
+    }
+
+    public String getUrlComprobante() {
+        return urlComprobante;
+    }
+
+    public void setUrlComprobante(String urlComprobante) {
+        this.urlComprobante = urlComprobante;
     }
 }
 

@@ -2,11 +2,17 @@ package com.example.dineroapp.adapter;
 
 import android.app.AlertDialog;
 import android.content.Context;
-import android.view.*;
-import android.widget.*;
+import android.view.LayoutInflater;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.ImageButton;
+import android.widget.TextView;
+import android.widget.Toast;
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.bumptech.glide.Glide;
 import com.example.dineroapp.R;
 import com.example.dineroapp.model.Egreso;
 import com.google.firebase.firestore.FirebaseFirestore;
@@ -18,18 +24,26 @@ import java.util.Locale;
 
 public class EgresoAdapter extends RecyclerView.Adapter<EgresoAdapter.EgresoViewHolder> {
 
+    public interface EgresoEditListener {
+        void mostrarDialogoEditar(Egreso egreso);
+    }
+
+    private EgresoEditListener editListener;
+
+    public void setEgresoEditListener(EgresoEditListener listener) {
+        this.editListener = listener;
+    }
+
     Context context;
     ArrayList<Egreso> egresos;
     FirebaseFirestore db;
 
-    // Constructor para inicializar contexto, lista de egresos y base de datos
     public EgresoAdapter(Context context, ArrayList<Egreso> egresos, FirebaseFirestore db) {
         this.context = context;
         this.egresos = egresos;
         this.db = db;
     }
 
-    // Infla el layout del ítem de egreso y crea el ViewHolder
     @NonNull
     @Override
     public EgresoViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -37,14 +51,12 @@ public class EgresoAdapter extends RecyclerView.Adapter<EgresoAdapter.EgresoView
         return new EgresoViewHolder(v);
     }
 
-    // Asocia los datos de un egreso a su vista correspondiente
     @Override
     public void onBindViewHolder(@NonNull EgresoViewHolder holder, int position) {
         Egreso egreso = egresos.get(position);
 
-        // Asigna valores a los TextViews del ítem
         holder.txtTitulo.setText(egreso.titulo);
-        holder.txtMonto.setText("-S/ " + egreso.monto);
+        holder.txtMonto.setText("S/ " + egreso.monto);
         holder.txtMonto.setTextColor(context.getResources().getColor(android.R.color.holo_red_dark));
         holder.txtFecha.setText(formatearFecha(egreso.fecha));
         holder.txtDescripcion.setText(
@@ -53,10 +65,12 @@ public class EgresoAdapter extends RecyclerView.Adapter<EgresoAdapter.EgresoView
                         : egreso.descripcion
         );
 
-        // Listener para botón de editar
-        holder.btnEditar.setOnClickListener(v -> showEditDialog(egreso));
+        holder.btnEditar.setOnClickListener(v -> {
+            if (editListener != null) {
+                editListener.mostrarDialogoEditar(egreso);
+            }
+        });
 
-        // Listener para botón de eliminar
         holder.btnEliminar.setOnClickListener(v -> {
             new AlertDialog.Builder(context)
                     .setTitle("Eliminar")
@@ -65,7 +79,6 @@ public class EgresoAdapter extends RecyclerView.Adapter<EgresoAdapter.EgresoView
                         db.collection("egreso").document(egreso.id)
                                 .delete()
                                 .addOnSuccessListener(unused -> {
-                                    // Si se elimina correctamente, actualiza la lista
                                     int currentPosition = holder.getAdapterPosition();
                                     if (currentPosition != RecyclerView.NO_POSITION && currentPosition < egresos.size()) {
                                         egresos.remove(currentPosition);
@@ -84,10 +97,9 @@ public class EgresoAdapter extends RecyclerView.Adapter<EgresoAdapter.EgresoView
 
     @Override
     public int getItemCount() {
-        return egresos.size(); // Devuelve cuántos egresos hay en la lista
+        return egresos.size();
     }
 
-    // ViewHolder que contiene referencias a los elementos del layout
     public static class EgresoViewHolder extends RecyclerView.ViewHolder {
         TextView txtTitulo, txtMonto, txtFecha, txtDescripcion;
         ImageButton btnEditar, btnEliminar;
@@ -103,64 +115,6 @@ public class EgresoAdapter extends RecyclerView.Adapter<EgresoAdapter.EgresoView
         }
     }
 
-    // Muestra un diálogo para editar un egreso existente
-    private void showEditDialog(Egreso egreso) {
-        LayoutInflater inflater = LayoutInflater.from(context);
-        View dialogView = inflater.inflate(R.layout.dialog_ingreso_editar, null); // Layout personalizado
-
-        // Referencias a los campos del diálogo
-        TextView txtTituloDisplay = dialogView.findViewById(R.id.txt_titulo_display);
-        TextView txtFechaDisplay = dialogView.findViewById(R.id.txt_fecha_display);
-        EditText edtMonto = dialogView.findViewById(R.id.edt_monto);
-        EditText edtDescripcion = dialogView.findViewById(R.id.edt_descripcion);
-
-        // Prellenar los campos con datos actuales
-        txtTituloDisplay.setText(egreso.titulo);
-        txtFechaDisplay.setText(formatearFecha(egreso.fecha));
-        edtMonto.setText(String.valueOf(egreso.monto));
-        edtDescripcion.setText(egreso.descripcion != null ? egreso.descripcion : "");
-
-        // Construcción del AlertDialog para edición
-        new AlertDialog.Builder(context)
-                .setTitle("Editar Egreso")
-                .setView(dialogView)
-                .setPositiveButton("Guardar", (dialog, which) -> {
-                    String montoStr = edtMonto.getText().toString().trim();
-                    String descripcion = edtDescripcion.getText().toString().trim();
-
-                    // Validación del monto ingresado
-                    if (montoStr.isEmpty()) {
-                        Toast.makeText(context, "Por favor ingresa un monto", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-
-                    double monto;
-                    try {
-                        monto = Double.parseDouble(montoStr);
-                    } catch (NumberFormatException e) {
-                        Toast.makeText(context, "Monto inválido", Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-
-                    // Actualizar objeto y enviar a Firestore
-                    egreso.monto = monto;
-                    egreso.descripcion = descripcion;
-
-                    db.collection("egreso").document(egreso.id)
-                            .set(egreso)
-                            .addOnSuccessListener(unused -> {
-                                notifyDataSetChanged(); // Refrescar lista
-                                Toast.makeText(context, "Egreso actualizado", Toast.LENGTH_SHORT).show();
-                            })
-                            .addOnFailureListener(e ->
-                                    Toast.makeText(context, "Error al actualizar", Toast.LENGTH_SHORT).show()
-                            );
-                })
-                .setNegativeButton("Cancelar", null)
-                .show();
-    }
-
-    // Formatea fecha de formato corto (ej: 1/6/2025) a largo (ej: 1 de junio de 2025)
     private String formatearFecha(String fechaOriginal) {
         try {
             SimpleDateFormat formatoEntrada = new SimpleDateFormat("d/M/yyyy");
@@ -168,7 +122,7 @@ public class EgresoAdapter extends RecyclerView.Adapter<EgresoAdapter.EgresoView
             SimpleDateFormat formatoSalida = new SimpleDateFormat("d 'de' MMMM 'de' yyyy", new Locale("es", "ES"));
             return formatoSalida.format(fecha);
         } catch (Exception e) {
-            return fechaOriginal; // Si falla el parseo, devuelve la original
+            return fechaOriginal;
         }
     }
 }
